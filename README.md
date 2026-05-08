@@ -5,7 +5,7 @@ OpenWrt package feed for EdgePulse.
 Use it from an OpenWrt buildroot with either a remote git feed:
 
 ```text
-src-git edgepulse https://github.com/Pod-01-Nier/edgepulse-openwrt-feed.git
+src-git edgepulse https://github.com/edgepulse-labs/edgepulse-openwrt-feed.git
 ```
 
 or a local development feed:

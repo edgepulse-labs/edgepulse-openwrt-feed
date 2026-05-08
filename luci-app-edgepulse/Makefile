@@ -5,7 +5,7 @@ LUCI_DEPENDS:=+edgepulse +luci-base +rpcd
 LUCI_PKGARCH:=all
 
 PKG_LICENSE:=MIT
-PKG_MAINTAINER:=Pod-01-Nier
+PKG_MAINTAINER:=edgepulse-labs
 
 include $(TOPDIR)/feeds/luci/luci.mk
 

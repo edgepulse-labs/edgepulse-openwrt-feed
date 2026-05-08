@@ -5,13 +5,13 @@ PKG_RELEASE:=1
 
 ifeq ($(EDGEPULSE_LOCAL_SOURCE),)
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_URL:=https://github.com/Pod-01-Nier/edgepulse.git
+PKG_SOURCE_URL:=https://github.com/edgepulse-labs/edgepulse.git
 PKG_SOURCE_VERSION:=HEAD
 PKG_MIRROR_HASH:=skip
 endif
 
 PKG_LICENSE:=MIT
-PKG_MAINTAINER:=Pod-01-Nier
+PKG_MAINTAINER:=edgepulse-labs
 
 include $(INCLUDE_DIR)/package.mk
 
