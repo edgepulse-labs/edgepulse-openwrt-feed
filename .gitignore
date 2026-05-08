@@ -1,0 +1,10 @@
+*.ipk
+*.o
+*.so
+*.a
+*.la
+*.lo
+*.tmp
+*.log
+.DS_Store
+

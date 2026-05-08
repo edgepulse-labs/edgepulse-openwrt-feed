@@ -1,0 +1,12 @@
+config edgepulse 'main'
+	option enabled '0'
+	option interval '5'
+	option database '/tmp/edgepulse/edgepulse.db'
+	option retention_hours '24'
+	list collectors 'cpu'
+	list collectors 'memory'
+	list collectors 'load'
+	list collectors 'network'
+	list collectors 'thermal'
+	list collectors 'uptime'
+

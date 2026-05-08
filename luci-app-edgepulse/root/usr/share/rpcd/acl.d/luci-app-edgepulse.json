@@ -1,0 +1,15 @@
+{
+	"luci-app-edgepulse": {
+		"description": "Grant access to EdgePulse status and settings",
+		"read": {
+			"uci": [ "edgepulse" ],
+			"ubus": {
+				"file": [ "read" ]
+			}
+		},
+		"write": {
+			"uci": [ "edgepulse" ]
+		}
+	}
+}
+
