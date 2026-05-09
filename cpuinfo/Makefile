@@ -30,9 +30,12 @@ define Package/cpuinfo/description
 endef
 
 CMAKE_OPTIONS += \
+	-DCMAKE_POSITION_INDEPENDENT_CODE=ON \
 	-DCPUINFO_BUILD_UNIT_TESTS=OFF \
 	-DCPUINFO_BUILD_MOCK_TESTS=OFF \
 	-DCPUINFO_BUILD_BENCHMARKS=OFF
+
+TARGET_CFLAGS += $(FPIC)
 
 define Build/InstallDev
 	$(call Build/InstallDev/cmake,$(1))

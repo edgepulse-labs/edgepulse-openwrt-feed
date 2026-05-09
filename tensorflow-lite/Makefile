@@ -24,7 +24,7 @@ define Package/tensorflow-lite
   CATEGORY:=Libraries
   TITLE:=TensorFlow Lite inference library
   URL:=https://www.tensorflow.org/lite
-  DEPENDS:=+abseil-cpp +cpuinfo +eigen +farmhash +fft2d +flatbuffers +gemmlowp +libpthread +libstdcpp +neon-2-sse +ruy +xnnpack
+  DEPENDS:=+abseil-cpp +cpuinfo +eigen +farmhash +fft2d +flatbuffers +gemmlowp +libpthread +libstdcpp +neon-2-sse +ruy
 endef
 
 define Package/tensorflow-lite/description
@@ -51,8 +51,7 @@ CMAKE_OPTIONS += \
 	-DTFLITE_ENABLE_MMAP=ON \
 	-DTFLITE_ENABLE_NNAPI=OFF \
 	-DTFLITE_ENABLE_RUY=ON \
-	-DTFLITE_ENABLE_XNNPACK=ON \
-	-Dxnnpack_POPULATED=ON
+	-DTFLITE_ENABLE_XNNPACK=OFF
 
 define Build/InstallDev
 	$(call Build/InstallDev/cmake,$(1))
@@ -61,6 +60,7 @@ endef
 define Package/tensorflow-lite/install
 	$(INSTALL_DIR) $(1)/usr/lib
 	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libtensorflow-lite.so* $(1)/usr/lib/
+	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libfft2d_fftsg*.so* $(1)/usr/lib/
 endef
 
 $(eval $(call BuildPackage,tensorflow-lite))
