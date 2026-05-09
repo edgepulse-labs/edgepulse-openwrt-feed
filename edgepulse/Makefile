@@ -3,15 +3,14 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=edgepulse
 PKG_RELEASE:=1
 
+PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)
+
 ifeq ($(EDGEPULSE_LOCAL_SOURCE),)
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_URL:=https://github.com/edgepulse-labs/edgepulse.git
-PKG_SOURCE_VERSION:=HEAD
+PKG_SOURCE_URL:=https://github.com/yihua1218/edgepulse.git
+PKG_SOURCE_VERSION:=main
 PKG_MIRROR_HASH:=skip
 endif
-
-PKG_LICENSE:=MIT
-PKG_MAINTAINER:=edgepulse-labs
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -23,15 +22,15 @@ define Package/edgepulse
 endef
 
 define Package/edgepulse/description
- EdgePulse collects local OpenWrt telemetry, stores raw samples in SQLite,
- derives feature windows, and exposes status/export helpers for LuCI.
+ EdgePulse collects local device telemetry for OpenWrt and prepares
+ time-window features for later AI training workflows.
 endef
 
-define Package/edgepulse/conffiles
-/etc/config/edgepulse
+ifeq ($(EDGEPULSE_LOCAL_SOURCE),)
+define Build/Prepare
+	$(call Build/Prepare/Default)
 endef
-
-ifneq ($(EDGEPULSE_LOCAL_SOURCE),)
+else
 define Build/Prepare
 	mkdir -p $(PKG_BUILD_DIR)
 	$(CP) $(EDGEPULSE_LOCAL_SOURCE)/. $(PKG_BUILD_DIR)/
@@ -39,19 +38,18 @@ define Build/Prepare
 endef
 endif
 
-define Build/Configure
-endef
-
 define Build/Compile
 	$(MAKE) -C $(PKG_BUILD_DIR) \
-		$(TARGET_CONFIGURE_OPTS) \
-		CFLAGS="$(TARGET_CFLAGS)" \
+		CC="$(TARGET_CC)" \
+		CPPFLAGS="$(TARGET_CPPFLAGS) -Iinclude" \
+		CFLAGS="$(TARGET_CFLAGS) -Wall -Wextra" \
 		LDFLAGS="$(TARGET_LDFLAGS)"
 endef
 
 define Package/edgepulse/install
-	$(INSTALL_DIR) $(1)/usr/sbin
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/edgepulse $(1)/usr/sbin/edgepulse
+	$(INSTALL_DIR) $(1)/usr/bin
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/edgepulse $(1)/usr/bin/edgepulse
+	$(INSTALL_BIN) $(PKG_BUILD_DIR)/edgepulse-ctl $(1)/usr/bin/edgepulse-ctl
 	$(INSTALL_DIR) $(1)/etc/config
 	$(INSTALL_CONF) ./files/etc/config/edgepulse $(1)/etc/config/edgepulse
 	$(INSTALL_DIR) $(1)/etc/init.d

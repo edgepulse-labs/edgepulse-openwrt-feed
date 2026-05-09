@@ -1,15 +1,15 @@
 {
 	"luci-app-edgepulse": {
-		"description": "Grant access to EdgePulse status and settings",
+		"description": "Grant read access to EdgePulse telemetry status",
 		"read": {
-			"uci": [ "edgepulse" ],
-			"ubus": {
-				"file": [ "read" ]
-			}
+			"file": {
+				"/usr/bin/edgepulse-ctl": [ "exec" ],
+				"/tmp/edgepulse/edgepulse.json": [ "read" ]
+			},
+			"uci": [ "edgepulse" ]
 		},
 		"write": {
 			"uci": [ "edgepulse" ]
 		}
 	}
 }
-

@@ -1,24 +1,22 @@
 # EdgePulse OpenWrt Feed
 
-OpenWrt package feed for EdgePulse.
+This directory is a development copy of the OpenWrt feed layout planned for the standalone `edgepulse-openwrt-feed` repository.
 
-Use it from an OpenWrt buildroot with either a remote git feed:
-
-```text
-src-git edgepulse https://github.com/edgepulse-labs/edgepulse-openwrt-feed.git
-```
-
-or a local development feed:
+Use it from an OpenWrt buildroot with a local feed line:
 
 ```text
-src-link edgepulse /path/to/edgepulse-openwrt-feed
+src-link edgepulse /path/to/edgepulse/packaging/openwrt-feed
 ```
 
-Then run:
+Then update and install the feed:
 
 ```sh
 ./scripts/feeds update edgepulse
 ./scripts/feeds install -a -p edgepulse
-make menuconfig
 ```
 
+For local source development, build the package with:
+
+```sh
+make package/feeds/edgepulse/edgepulse/compile V=s EDGEPULSE_LOCAL_SOURCE=/path/to/edgepulse
+```
