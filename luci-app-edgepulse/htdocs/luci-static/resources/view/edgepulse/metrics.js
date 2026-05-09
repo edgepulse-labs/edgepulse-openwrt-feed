@@ -16,8 +16,12 @@ function renderRows(samples) {
 }
 
 return view.extend({
+	handleSaveApply: null,
+	handleSave: null,
+	handleReset: null,
+
 	load: function() {
-		return fs.exec_direct('/usr/bin/edgepulse-ctl', [ 'latest', '--json' ])
+		return fs.exec_direct('/usr/libexec/edgepulse-luci', [ 'latest' ])
 			.catch(function(err) {
 				return JSON.stringify({ error: String(err), samples: [] });
 			});
@@ -25,6 +29,7 @@ return view.extend({
 
 	render: function(data) {
 		var parsed = {};
+		var rows;
 
 		try {
 			parsed = JSON.parse(data || '{}');
@@ -35,18 +40,19 @@ return view.extend({
 		if (parsed.error)
 			ui.addNotification(null, E('p', {}, parsed.error), 'danger');
 
+		rows = [
+			E('tr', { 'class': 'tr table-titles' }, [
+				E('th', { 'class': 'th' }, _('Timestamp')),
+				E('th', { 'class': 'th' }, _('Metric')),
+				E('th', { 'class': 'th' }, _('Labels')),
+				E('th', { 'class': 'th' }, _('Value')),
+				E('th', { 'class': 'th' }, _('Status'))
+			])
+		].concat(renderRows(parsed.samples || []));
+
 		return E('div', { 'class': 'cbi-map' }, [
 			E('h2', {}, _('EdgePulse Metrics')),
-			E('table', { 'class': 'table' }, [
-				E('tr', { 'class': 'tr table-titles' }, [
-					E('th', { 'class': 'th' }, _('Timestamp')),
-					E('th', { 'class': 'th' }, _('Metric')),
-					E('th', { 'class': 'th' }, _('Labels')),
-					E('th', { 'class': 'th' }, _('Value')),
-					E('th', { 'class': 'th' }, _('Status'))
-				]),
-				renderRows(parsed.samples || [])
-			])
+			E('table', { 'class': 'table' }, rows)
 		]);
 	}
 });

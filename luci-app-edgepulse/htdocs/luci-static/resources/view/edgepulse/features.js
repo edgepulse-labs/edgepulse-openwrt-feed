@@ -11,14 +11,22 @@ function renderRows(features) {
 			E('td', {}, feature.count != null ? feature.count : '-'),
 			E('td', {}, feature.mean != null ? '%.6f'.format(feature.mean) : '-'),
 			E('td', {}, feature.min != null ? '%.6f'.format(feature.min) : '-'),
-			E('td', {}, feature.max != null ? '%.6f'.format(feature.max) : '-')
+			E('td', {}, feature.max != null ? '%.6f'.format(feature.max) : '-'),
+			E('td', {}, feature.stddev != null ? '%.6f'.format(feature.stddev) : '-'),
+			E('td', {}, feature.delta != null ? '%.6f'.format(feature.delta) : '-'),
+			E('td', {}, feature.rate_per_sec != null ? '%.6f'.format(feature.rate_per_sec) : '-'),
+			E('td', {}, feature.coefficient_of_variation != null ? '%.6f'.format(feature.coefficient_of_variation) : '-')
 		]);
 	});
 }
 
 return view.extend({
+	handleSaveApply: null,
+	handleSave: null,
+	handleReset: null,
+
 	load: function() {
-		return fs.exec_direct('/usr/bin/edgepulse-ctl', [ 'features', '--json', '--window', '60' ])
+		return fs.exec_direct('/usr/libexec/edgepulse-luci', [ 'features', '60' ])
 			.catch(function(err) {
 				return JSON.stringify({ error: String(err), features: [] });
 			});
@@ -26,6 +34,7 @@ return view.extend({
 
 	render: function(data) {
 		var parsed = {};
+		var rows;
 
 		try {
 			parsed = JSON.parse(data || '{}');
@@ -36,19 +45,24 @@ return view.extend({
 		if (parsed.error)
 			ui.addNotification(null, E('p', {}, parsed.error), 'danger');
 
+		rows = [
+			E('tr', { 'class': 'tr table-titles' }, [
+				E('th', { 'class': 'th' }, _('Metric')),
+				E('th', { 'class': 'th' }, _('Labels')),
+				E('th', { 'class': 'th' }, _('Count')),
+				E('th', { 'class': 'th' }, _('Mean')),
+				E('th', { 'class': 'th' }, _('Min')),
+				E('th', { 'class': 'th' }, _('Max')),
+				E('th', { 'class': 'th' }, _('Stddev')),
+				E('th', { 'class': 'th' }, _('Delta')),
+				E('th', { 'class': 'th' }, _('Rate/s')),
+				E('th', { 'class': 'th' }, _('CV'))
+			])
+		].concat(renderRows(parsed.features || []));
+
 		return E('div', { 'class': 'cbi-map' }, [
 			E('h2', {}, _('EdgePulse Features')),
-			E('table', { 'class': 'table' }, [
-				E('tr', { 'class': 'tr table-titles' }, [
-					E('th', { 'class': 'th' }, _('Metric')),
-					E('th', { 'class': 'th' }, _('Labels')),
-					E('th', { 'class': 'th' }, _('Count')),
-					E('th', { 'class': 'th' }, _('Mean')),
-					E('th', { 'class': 'th' }, _('Min')),
-					E('th', { 'class': 'th' }, _('Max'))
-				]),
-				renderRows(parsed.features || [])
-			])
+			E('table', { 'class': 'table' }, rows)
 		]);
 	}
 });
