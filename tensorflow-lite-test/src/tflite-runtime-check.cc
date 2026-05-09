@@ -1,5 +1,6 @@
 #include <cmath>
 #include <cstdint>
+#include <cerrno>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -7,6 +8,7 @@
 #include <iostream>
 #include <string>
 #include <vector>
+#include <sys/stat.h>
 
 #include "flatbuffers/flatbuffers.h"
 #include "tensorflow/lite/c/c_api.h"
@@ -31,8 +33,7 @@ std::vector<uint8_t> BuildAddModel() {
       builder, shape, tflite::TensorType_FLOAT32, 0, sum_name));
 
   const auto op_code = tflite::CreateOperatorCode(
-      builder, tflite::BuiltinOperator_ADD, 0, 1,
-      tflite::BuiltinOperator_ADD);
+      builder, 0, 0, 1, tflite::BuiltinOperator_ADD);
 
   const auto inputs = builder.CreateVector<int32_t>({0, 1});
   const auto outputs = builder.CreateVector<int32_t>({2});
@@ -152,7 +153,10 @@ int main(int argc, char** argv) {
       argc > 1 ? argv[1] : "/tmp/tflite-runtime-check/add.tflite";
 
   if (argc == 1) {
-    std::system("mkdir -p /tmp/tflite-runtime-check");
+    if (mkdir("/tmp/tflite-runtime-check", 0755) != 0 && errno != EEXIST) {
+      std::cerr << "failed to create /tmp/tflite-runtime-check\n";
+      return 1;
+    }
     if (!WriteFile(model_path, BuildAddModel())) {
       std::cerr << "failed to write generated model: " << model_path << "\n";
       return 1;

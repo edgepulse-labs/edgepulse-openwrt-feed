@@ -15,6 +15,7 @@ PKG_LICENSE_FILES:=LICENSE
 CMAKE_INSTALL:=1
 CMAKE_SOURCE_SUBDIR:=tensorflow/lite
 PKG_BUILD_PARALLEL:=1
+PKG_BUILD_DEPENDS:=cpuinfo eigen farmhash fft2d flatbuffers gemmlowp neon-2-sse ruy
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk
@@ -24,7 +25,7 @@ define Package/tensorflow-lite
   CATEGORY:=Libraries
   TITLE:=TensorFlow Lite inference library
   URL:=https://www.tensorflow.org/lite
-  DEPENDS:=+abseil-cpp +cpuinfo +eigen +farmhash +fft2d +flatbuffers +gemmlowp +libpthread +libstdcpp +neon-2-sse +ruy
+  DEPENDS:=+farmhash +libpthread +libstdcpp
 endef
 
 define Package/tensorflow-lite/description
@@ -55,11 +56,12 @@ CMAKE_OPTIONS += \
 
 define Build/InstallDev
 	$(call Build/InstallDev/cmake,$(1))
+	$(CP) $(PKG_BUILD_DIR)/libtensorflow-lite.so $(1)/usr/lib/
 endef
 
 define Package/tensorflow-lite/install
 	$(INSTALL_DIR) $(1)/usr/lib
-	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libtensorflow-lite.so* $(1)/usr/lib/
+	$(CP) $(PKG_BUILD_DIR)/libtensorflow-lite.so $(1)/usr/lib/
 	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libfft2d_fftsg*.so* $(1)/usr/lib/
 endef
 
