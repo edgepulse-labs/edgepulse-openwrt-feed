@@ -21,6 +21,10 @@ return view.extend({
 			fs.exec_direct('/usr/libexec/edgepulse-luci', [ 'agent-models-remote' ])
 				.catch(function(err) {
 					return JSON.stringify({ error: String(err), models: [] });
+				}),
+			fs.exec_direct('/usr/libexec/edgepulse-luci', [ 'agent-chat-list', 'default' ])
+				.catch(function(err) {
+					return JSON.stringify({ error: String(err), messages: [] });
 				})
 		]);
 	},
@@ -28,14 +32,15 @@ return view.extend({
 	runDiagnostic: function(ev) {
 		var textarea = document.querySelector('[data-edgepulse-agent-question]');
 		var output = document.querySelector('[data-edgepulse-agent-output]');
+		var transcript = document.querySelector('[data-edgepulse-agent-transcript]');
 		var message = ev && ev.currentTarget && ev.currentTarget.getAttribute('data-edgepulse-agent-prompt') ||
 			textarea && textarea.value ||
 			'Run a local EdgePulse diagnostic.';
 
 		if (output)
-			output.textContent = _('Running diagnostic...');
+			output.textContent = _('Sending message...');
 
-		return fs.exec_direct('/usr/libexec/edgepulse-luci', [ 'agent-diagnose', message ])
+		return fs.exec_direct('/usr/libexec/edgepulse-luci', [ 'agent-chat-ask', 'default', message ])
 			.then(function(result) {
 				var parsed;
 
@@ -47,7 +52,18 @@ return view.extend({
 					if (output)
 						output.textContent = result || _('No output');
 				}
+
+				return fs.exec_direct('/usr/libexec/edgepulse-luci', [ 'agent-chat-list', 'default' ]);
 			})
+			.then(function(chatResult) {
+				var parsed;
+
+				try {
+					parsed = JSON.parse(chatResult || '{}');
+					if (transcript)
+						transcript.textContent = this.renderTranscript(parsed.messages || []);
+				} catch (e) {}
+			}.bind(this))
 			.catch(function(err) {
 				ui.addNotification(null, E('p', {}, String(err)), 'danger');
 				if (output)
@@ -55,6 +71,14 @@ return view.extend({
 			});
 	},
 
+	renderTranscript: function(messages) {
+		if (!messages || !messages.length)
+			return _('No shared conversation messages yet. CLI and LuCI messages will appear here.');
+
+		return messages.map(function(item) {
+			return '[' + (item.role || '-') + '] ' + (item.content || '');
+		}).join('\n\n');
+	},
 	copyText: function(text) {
 		if (navigator.clipboard && navigator.clipboard.writeText)
 			return navigator.clipboard.writeText(text).then(function() {
@@ -113,6 +137,7 @@ return view.extend({
 		var memory = {};
 		var models = {};
 		var remoteModels = {};
+		var chat = {};
 
 		try {
 			status = JSON.parse((data && data[0]) || '{}');
@@ -134,6 +159,11 @@ return view.extend({
 			remoteModels = JSON.parse((data && data[3]) || '{}');
 		} catch (e) {
 			remoteModels = { error: _('Unable to parse remote model list output'), models: [] };
+		}
+		try {
+			chat = JSON.parse((data && data[4]) || '{}');
+		} catch (e) {
+			chat = { error: _('Unable to parse shared conversation output'), messages: [] };
 		}
 
 		if (status.error)
@@ -198,6 +228,11 @@ return view.extend({
 				(remoteModels.models || []).map(function(item) {
 					return item.id;
 				}).join('\n') || (remoteModels.status ? _('Status: ') + remoteModels.status : _('No remote models loaded'))),
+			E('h3', {}, _('Shared conversation')),
+			E('pre', {
+				'data-edgepulse-agent-transcript': '1',
+				'style': 'white-space:pre-wrap; min-height:8em'
+			}, this.renderTranscript(chat.messages || [])),
 			E('h3', {}, _('Diagnostic')),
 			E('div', { 'class': 'cbi-section' }, [
 				E('textarea', {
