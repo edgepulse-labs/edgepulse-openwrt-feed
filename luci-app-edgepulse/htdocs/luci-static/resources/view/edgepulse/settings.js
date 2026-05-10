@@ -1,6 +1,8 @@
 'use strict';
 'require view';
 'require form';
+'require fs';
+'require uci';
 
 return view.extend({
 	render: function() {
@@ -37,6 +39,98 @@ return view.extend({
 		s.option(form.Flag, 'enable_wireless', _('Wireless collector'));
 		s.option(form.Flag, 'enable_conntrack', _('Conntrack collector'));
 		s.option(form.Flag, 'enable_nft', _('nftables collector'));
+
+		s = m.section(form.NamedSection, 'agent', 'agent', _('AI Agent'));
+
+		o = s.option(form.Flag, 'enabled', _('Enabled'));
+		o.default = o.disabled;
+
+		o = s.option(form.Flag, 'local_only', _('Local only'));
+		o.default = o.enabled;
+
+		o = s.option(form.Flag, 'memory_enabled', _('Memory'));
+		o.default = o.enabled;
+
+		o = s.option(form.Flag, 'shell_enabled', _('Shell tools'));
+		o.default = o.enabled;
+
+		o = s.option(form.Flag, 'ubus_enabled', _('ubus tools'));
+		o.default = o.enabled;
+
+		o = s.option(form.ListValue, 'policy_profile', _('Policy'));
+		o.value('read_only', _('Read only'));
+		o.default = 'read_only';
+
+		o = s.option(form.Value, 'request_timeout_sec', _('Request timeout'));
+		o.datatype = 'uinteger';
+		o.default = '60';
+
+		o = s.option(form.Value, 'heartbeat_interval_sec', _('Heartbeat interval'));
+		o.datatype = 'uinteger';
+		o.default = '60';
+
+		o = s.option(form.Value, 'tool_timeout_sec', _('Tool timeout'));
+		o.datatype = 'uinteger';
+		o.default = '5';
+
+		o = s.option(form.Value, 'max_tool_output_bytes', _('Max tool output'));
+		o.datatype = 'uinteger';
+		o.default = '8192';
+
+		s = m.section(form.TypedSection, 'model', _('AI Models'));
+		s.anonymous = false;
+		s.addremove = true;
+
+		o = s.option(form.Flag, 'enabled', _('Enabled'));
+		o.default = o.disabled;
+
+		o = s.option(form.Value, 'role', _('Role'));
+		o.default = 'planner,analyzer,responder';
+
+		o = s.option(form.Value, 'base_url', _('Base URL'));
+		o.placeholder = 'https://api.example.com/v1';
+
+		o = s.option(form.Value, 'model', _('Model'));
+		o.load = function(section_id) {
+			var self = this;
+			return fs.exec_direct('/usr/libexec/edgepulse-luci', [ 'agent-models-remote', section_id ])
+				.then(function(result) {
+					var parsed = JSON.parse(result || '{}');
+					(parsed.models || []).forEach(function(item) {
+						if (item && item.id)
+							self.value(item.id, item.id);
+					});
+					return uci.get('edgepulse', section_id, 'model');
+				})
+				.catch(function() {
+					return uci.get('edgepulse', section_id, 'model');
+				});
+		};
+
+		o = s.option(form.Value, 'api_key', _('API key'));
+		o.password = true;
+
+		o = s.option(form.Value, 'api_key_env', _('API key environment'));
+		o.default = 'EDGEPULSE_AI_API_KEY';
+
+		o = s.option(form.Value, 'timeout_sec', _('Timeout'));
+		o.datatype = 'uinteger';
+		o.default = '60';
+
+		o = s.option(form.Value, 'retry_count', _('Retries'));
+		o.datatype = 'uinteger';
+		o.default = '0';
+
+		o = s.option(form.Value, 'max_tokens', _('Max tokens'));
+		o.datatype = 'uinteger';
+		o.default = '2048';
+
+		o = s.option(form.Flag, 'no_think', _('Request no-think mode'));
+		o.default = o.disabled;
+
+		o = s.option(form.Value, 'priority', _('Priority'));
+		o.datatype = 'uinteger';
+		o.default = '100';
 
 		return m.render();
 	}
