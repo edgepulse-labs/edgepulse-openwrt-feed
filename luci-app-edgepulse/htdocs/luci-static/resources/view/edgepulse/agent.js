@@ -47,7 +47,7 @@ return view.extend({
 				try {
 					parsed = JSON.parse(result || '{}');
 					if (output)
-						output.textContent = JSON.stringify(parsed, null, 2);
+						output.textContent = this.renderDiagnosticReport(parsed);
 				} catch (e) {
 					if (output)
 						output.textContent = result || _('No output');
@@ -78,6 +78,63 @@ return view.extend({
 		return messages.map(function(item) {
 			return '[' + (item.role || '-') + '] ' + (item.content || '');
 		}).join('\n\n');
+	},
+
+	renderDiagnosticReport: function(result) {
+		var lines = [];
+		var snapshot = result.snapshot || {};
+		var findings = result.findings || [];
+		var tools = result.tools || [];
+		var modelResponse = result.model_response || {};
+		var failover = result.model_failover || {};
+
+		lines.push(_('Diagnostic Report'));
+		lines.push('=================');
+		lines.push('');
+		lines.push(_('Summary'));
+		lines.push('- ' + (result.answer || _('No answer returned.')));
+		lines.push('');
+		lines.push(_('Request'));
+		lines.push('- ' + _('Question') + ': ' + (result.question || '-'));
+		lines.push('- ' + _('Request ID') + ': ' + (result.request_id || '-'));
+		lines.push('- ' + _('Conversation') + ': ' + (result.conversation_id || 'default'));
+		lines.push('- ' + _('Policy') + ': ' + (result.policy_profile || '-'));
+		lines.push('');
+		lines.push(_('Model'));
+		lines.push('- ' + _('Status') + ': ' + (result.model_status || modelResponse.status || '-'));
+		lines.push('- ' + _('HTTP status') + ': ' + (modelResponse.http_status || 0));
+		lines.push('- ' + _('Finish reason') + ': ' + (modelResponse.finish_reason || '-'));
+		lines.push('- ' + _('Failover attempts') + ': ' + (failover.attempts || '-'));
+		lines.push('- ' + _('Selected provider') + ': ' + (failover.selected_provider || '-'));
+		lines.push('');
+		lines.push(_('Current Snapshot'));
+		lines.push('- ' + _('Uptime') + ': ' + (snapshot.uptime_sec != null ? Math.round(snapshot.uptime_sec) + 's' : '-'));
+		lines.push('- ' + _('Load') + ': ' + [ snapshot.load1, snapshot.load5, snapshot.load15 ].map(function(v) {
+			return v != null ? Number(v).toFixed(2) : '-';
+		}).join(' / '));
+		lines.push('- ' + _('Memory used') + ': ' + (snapshot.memory_used_ratio != null ? (Number(snapshot.memory_used_ratio) * 100).toFixed(1) + '%' : '-'));
+		lines.push('');
+		lines.push(_('Findings'));
+		if (findings.length) {
+			findings.forEach(function(item) {
+				lines.push('- [' + (item.severity || '-') + '] ' + (item.message || '-'));
+			});
+		} else {
+			lines.push('- ' + _('No findings returned.'));
+		}
+		lines.push('');
+		lines.push(_('Tool Evidence'));
+		if (tools.length) {
+			tools.forEach(function(tool) {
+				var status = tool.status || '-';
+				var exitCode = tool.exit_code != null ? ', exit=' + tool.exit_code : '';
+				lines.push('- ' + (tool.name || '-') + ': ' + status + exitCode);
+			});
+		} else {
+			lines.push('- ' + _('No tools were reported.'));
+		}
+
+		return lines.join('\n');
 	},
 	copyText: function(text) {
 		if (navigator.clipboard && navigator.clipboard.writeText)

@@ -43,6 +43,9 @@ case "$cmd" in
 	agent-policy)
 		exec /usr/bin/edgepulse-ctl agent policy show
 		;;
+	agent-mcp-methods)
+		exec /usr/bin/edgepulse-ctl agent mcp methods
+		;;
 	agent-memory)
 		exec /usr/bin/edgepulse-ctl agent memory list
 		;;
