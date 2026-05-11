@@ -8,12 +8,14 @@ Lite runtime support, and a small TensorFlow Lite validation utility. The feed
 also carries the TensorFlow Lite build dependencies that are not normally
 available from the target OpenWrt package feeds used by this project.
 
-Current status as of 2026-05-10: the `edgepulse` and `luci-app-edgepulse`
+Current status as of 2026-05-11: the `edgepulse` and `luci-app-edgepulse`
 packages have been installed and validated on OpenWrt One. The daemon package
 includes the optional AI Agent build, shared chat storage, policy-gated
 OpenWrt actions, and the first local C MCP adapter. The LuCI package includes
 AI Agent settings, shared chat helper commands, and a Diagnostic report view
-that renders structured results in a human-readable form.
+that renders structured results in a human-readable form. TensorFlow Lite
+2.14.1 and the runtime validation utility have also been installed and
+validated on OpenWrt One.
 
 ## Packages
 
@@ -23,13 +25,13 @@ that renders structured results in a human-readable form.
 - `luci-app-edgepulse`: LuCI pages and RPC helper for viewing and configuring
   EdgePulse from the OpenWrt web UI, including AI Agent settings, diagnostics,
   shared chat helpers, and readable Diagnostic reports.
-- `tensorflow-lite`: TensorFlow Lite 2.11.0 shared runtime library for running
+- `tensorflow-lite`: TensorFlow Lite 2.14.1 shared runtime library for running
   trained models on-device.
 - `tensorflow-lite-test`: runtime check tool that generates a minimal `.tflite`
   ADD model, loads it through TensorFlow Lite, runs inference, and verifies the
   result.
 - TensorFlow Lite support libraries: `cpuinfo`, `eigen`, `farmhash`, `fft2d`,
-  `flatbuffers`, `fp16`, `fxdiv`, `gemmlowp`, `neon-2-sse`, `psimd`,
+  `flatbuffers`, `fp16`, `fxdiv`, `gemmlowp`, `ml-dtypes`, `neon-2-sse`, `psimd`,
   `pthreadpool`, `ruy`, and `xnnpack`.
 
 ## Using The Feed
@@ -101,7 +103,7 @@ Install the related APKs on an OpenWrt target:
 ```sh
 apk add --allow-untrusted \
   /tmp/edgepulse-apks/farmhash-1.1.0-r1.apk \
-  /tmp/edgepulse-apks/tensorflow-lite-2.11.0-r1.apk \
+  /tmp/edgepulse-apks/tensorflow-lite-2.14.1-r1.apk \
   /tmp/edgepulse-apks/tensorflow-lite-test-1.0-r1.apk \
   /tmp/edgepulse-apks/edgepulse-1.apk \
   /tmp/edgepulse-apks/luci-app-edgepulse-1.apk
@@ -129,7 +131,7 @@ A successful run prints output similar to:
 
 ```text
 TensorFlow Lite runtime OK: 2 + 3.5 = 5.5
-TfLiteVersion: 2.11.0
+TfLiteVersion: 2.14.1
 ```
 
 The validation tool does not require downloading a model. It creates a small

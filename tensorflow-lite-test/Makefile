@@ -31,7 +31,7 @@ endef
 define Build/Compile
 	$(TARGET_CXX) $(TARGET_CPPFLAGS) $(TARGET_CXXFLAGS) -std=c++17 \
 		-I$(STAGING_DIR)/usr/include \
-		-I$(BUILD_DIR)/tensorflow-2.11.0 \
+		-I$(BUILD_DIR)/tensorflow-2.14.1 \
 		-o $(PKG_BUILD_DIR)/tflite-runtime-check \
 		$(PKG_BUILD_DIR)/tflite-runtime-check.cc \
 		$(TARGET_LDFLAGS) -ltensorflow-lite

@@ -34,6 +34,7 @@ define Build/InstallDev
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/fft2d/*.c $(1)/usr/include/fft2d/
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/fft2d/*.f $(1)/usr/include/fft2d/
 	$(INSTALL_DATA) $(PKG_BUILD_DIR)/fft2d/*.h $(1)/usr/include/fft2d/
+	$(INSTALL_DATA) $(PKG_BUILD_DIR)/fft2d/readme2d.txt $(1)/usr/include/fft2d/
 endef
 
 $(eval $(call BuildPackage,fft2d))

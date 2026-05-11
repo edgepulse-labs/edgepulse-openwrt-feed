@@ -1,12 +1,12 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=tensorflow-lite
-PKG_VERSION:=2.11.0
+PKG_VERSION:=2.14.1
 PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=https://codeload.github.com/tensorflow/tensorflow/tar.gz/v$(PKG_VERSION)?
-PKG_HASH:=99c732b92b1b37fc243a559e02f9aef5671771e272758aa4aec7f34dc92dac48
+PKG_HASH:=6b31ed347ed7a03c45b906aa41628ac91c3db7c84cb816971400d470e58ba494
 PKG_BUILD_DIR:=$(BUILD_DIR)/tensorflow-$(PKG_VERSION)
 
 PKG_LICENSE:=Apache-2.0
@@ -15,7 +15,7 @@ PKG_LICENSE_FILES:=LICENSE
 CMAKE_INSTALL:=1
 CMAKE_SOURCE_SUBDIR:=tensorflow/lite
 PKG_BUILD_PARALLEL:=1
-PKG_BUILD_DEPENDS:=cpuinfo eigen farmhash fft2d flatbuffers gemmlowp neon-2-sse ruy
+PKG_BUILD_DEPENDS:=abseil-cpp cpuinfo eigen farmhash fft2d flatbuffers gemmlowp ml-dtypes neon-2-sse pthreadpool ruy
 
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk
@@ -42,9 +42,13 @@ CMAKE_OPTIONS += \
 	-DEigen3_DIR=$(STAGING_DIR)/usr/share/eigen3/cmake \
 	-DFETCHCONTENT_FULLY_DISCONNECTED=ON \
 	-DFETCHCONTENT_QUIET=OFF \
+	-DFETCHCONTENT_SOURCE_DIR_FFT2D=$(STAGING_DIR)/usr/include/fft2d \
+	-DFETCHCONTENT_SOURCE_DIR_ML_DTYPES=$(STAGING_DIR)/usr/src/ml_dtypes \
 	-DFFT2D_SOURCE_DIR=$(STAGING_DIR)/usr/include/fft2d \
 	-DFlatBuffers_DIR=$(STAGING_DIR)/usr/lib/cmake/flatbuffers \
+	-DML_DTYPES_SOURCE_DIR=$(STAGING_DIR)/usr/src/ml_dtypes \
 	-DNEON_2_SSE_DIR=$(STAGING_DIR)/usr/lib/cmake/NEON_2_SSE \
+	-DSYSTEM_PTHREADPOOL=ON \
 	-DSYSTEM_FARMHASH=ON \
 	-DTFLITE_ENABLE_EXTERNAL_DELEGATE=ON \
 	-DTFLITE_ENABLE_GPU=OFF \

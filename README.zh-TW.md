@@ -8,11 +8,12 @@ runtime 支援，以及一個用來驗證 TensorFlow Lite 是否能正常載入�
 推論的小工具。這裡也收錄了本專案使用的 OpenWrt feeds 中通常沒有提供、
 但建置 TensorFlow Lite 需要的相依套件。
 
-截至 2026-05-10，`edgepulse` 與 `luci-app-edgepulse` packages 已安裝並在
+截至 2026-05-11，`edgepulse` 與 `luci-app-edgepulse` packages 已安裝並在
 OpenWrt One 驗證。Daemon package 包含 optional AI Agent build、shared chat
 storage、policy-gated OpenWrt actions，以及第一版 local C MCP adapter。LuCI
 package 包含 AI Agent settings、shared chat helper commands，以及會把
-structured results 整理成人類可讀內容的 Diagnostic report view。
+structured results 整理成人類可讀內容的 Diagnostic report view。TensorFlow
+Lite 2.14.1 與 runtime 驗證工具也已在 OpenWrt One 完成安裝與驗證。
 
 ## 套件
 
@@ -22,12 +23,12 @@ structured results 整理成人類可讀內容的 Diagnostic report view。
 - `luci-app-edgepulse`：LuCI 頁面與 RPC helper，可在 OpenWrt Web UI 中查看
   與設定 EdgePulse，包含 AI Agent settings、diagnostics、shared chat helpers
   與可讀的 Diagnostic reports。
-- `tensorflow-lite`：TensorFlow Lite 2.11.0 shared runtime library，用來在
+- `tensorflow-lite`：TensorFlow Lite 2.14.1 shared runtime library，用來在
   裝置端執行訓練好的模型。
 - `tensorflow-lite-test`：runtime 驗證工具，會產生一個最小的 `.tflite` ADD
   模型，透過 TensorFlow Lite 載入、執行推論，並檢查結果。
 - TensorFlow Lite 支援函式庫：`cpuinfo`、`eigen`、`farmhash`、`fft2d`、
-  `flatbuffers`、`fp16`、`fxdiv`、`gemmlowp`、`neon-2-sse`、`psimd`、
+  `flatbuffers`、`fp16`、`fxdiv`、`gemmlowp`、`ml-dtypes`、`neon-2-sse`、`psimd`、
   `pthreadpool`、`ruy`、`xnnpack`。
 
 ## 使用 Feed
@@ -99,7 +100,7 @@ bin/packages/<arch>/edgepulse/
 ```sh
 apk add --allow-untrusted \
   /tmp/edgepulse-apks/farmhash-1.1.0-r1.apk \
-  /tmp/edgepulse-apks/tensorflow-lite-2.11.0-r1.apk \
+  /tmp/edgepulse-apks/tensorflow-lite-2.14.1-r1.apk \
   /tmp/edgepulse-apks/tensorflow-lite-test-1.0-r1.apk \
   /tmp/edgepulse-apks/edgepulse-1.apk \
   /tmp/edgepulse-apks/luci-app-edgepulse-1.apk
@@ -126,7 +127,7 @@ tflite-runtime-check
 
 ```text
 TensorFlow Lite runtime OK: 2 + 3.5 = 5.5
-TfLiteVersion: 2.11.0
+TfLiteVersion: 2.14.1
 ```
 
 這個驗證工具不需要另外下載模型。它會在 target 上產生一個小型測試模型，

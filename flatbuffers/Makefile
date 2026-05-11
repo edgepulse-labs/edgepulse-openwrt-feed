@@ -1,12 +1,12 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=flatbuffers
-PKG_VERSION:=25.2.10
+PKG_VERSION:=23.5.26
 PKG_RELEASE:=1
 
 PKG_SOURCE:=$(PKG_NAME)-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=https://codeload.github.com/google/flatbuffers/tar.gz/v$(PKG_VERSION)?
-PKG_HASH:=b9c2df49707c57a48fc0923d52b8c73beb72d675f9d44b2211e4569be40a7421
+PKG_HASH:=1cce06b17cddd896b6d73cc047e36a254fb8df4d7ea18a46acf16c4c0cd3f3f3
 
 PKG_LICENSE:=Apache-2.0
 PKG_LICENSE_FILES:=LICENSE
