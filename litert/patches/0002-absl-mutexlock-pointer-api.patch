@@ -1,0 +1,80 @@
+--- a/litert/c/litert_compiled_model.cc
++++ b/litert/c/litert_compiled_model.cc
+@@ -52,7 +52,7 @@ LiteRtStatus LiteRtCompiledModelCreate(
+   // TODO b/491180241 - Experimental multi-threading support for CompiledModel
+   // creation.
+   // Note: The entire CompiledModel APIs are not verified to support
+   // multi-threading.
+-  absl::MutexLock lock(compiled_model_create_mutex);
++  absl::MutexLock lock(&compiled_model_create_mutex);
+ 
+   LITERT_ASSIGN_OR_RETURN(auto created_compiled_model,
+                           LiteRtCompiledModelT::Create(
+--- a/litert/c/litert_environment.cc
++++ b/litert/c/litert_environment.cc
+@@ -47,7 +47,7 @@ LiteRtStatus LiteRtCreateEnvironment(
+   // TODO b/491180241 - Experimental multi-threading support for Environment
+   // creation.
+   // Note: The entire Environment APIs are not verified to support
+   // multi-threading.
+-  absl::MutexLock lock(environment_create_mutex);
++  absl::MutexLock lock(&environment_create_mutex);
+ 
+   auto min_logger_severity = std::find_if(
+       options, options + num_options, [](const LiteRtEnvOption& option) {
+--- a/litert/runtime/open_cl_memory.cc
++++ b/litert/runtime/open_cl_memory.cc
+@@ -53,7 +53,7 @@ template Expected<void> OpenClMemory::Un
+ 
+ template <typename T>
+ Expected<T*> OpenClMemory::Lock(LiteRtTensorBufferLockMode mode) {
+-  absl::MutexLock lock(mutex_);
++  absl::MutexLock lock(&mutex_);
+   LITERT_RETURN_IF_ERROR(
+       IsSupported(),
+       Unexpected(kLiteRtStatusErrorRuntimeFailure, "OpenCL is not supported"));
+@@ -106,7 +106,7 @@ Expected<T*> OpenClMemory::Lock(LiteRtTe
+ 
+ template <typename T>
+ Expected<void> OpenClMemory::Unlock() {
+-  absl::MutexLock lock(mutex_);
++  absl::MutexLock lock(&mutex_);
+   LITERT_RETURN_IF_ERROR(
+       IsSupported(),
+       Unexpected(kLiteRtStatusErrorRuntimeFailure, "OpenCL is not supported"));
+--- a/tflite/core/acceleration/configuration/delegate_registry.cc
++++ b/tflite/core/acceleration/configuration/delegate_registry.cc
+@@ -29,13 +29,13 @@ void DelegatePluginRegistry::RegisterImp
+     std::function<
+         std::unique_ptr<DelegatePluginInterface>(const TFLiteSettings&)>
+         creator_function) {
+-  absl::MutexLock lock(mutex_);
++  absl::MutexLock lock(&mutex_);
+   factories_[name] = creator_function;
+ }
+ 
+ std::unique_ptr<DelegatePluginInterface> DelegatePluginRegistry::CreateImpl(
+     const std::string& name, const TFLiteSettings& settings) {
+-  absl::MutexLock lock(mutex_);
++  absl::MutexLock lock(&mutex_);
+   auto it = factories_.find(name);
+   return (it != factories_.end()) ? it->second(settings) : nullptr;
+ }
+--- a/tflite/core/acceleration/configuration/stable_delegate_registry.cc
++++ b/tflite/core/acceleration/configuration/stable_delegate_registry.cc
+@@ -36,13 +36,13 @@ StableDelegateRegistry* StableDelegateRe
+ 
+ void StableDelegateRegistry::RegisterStableDelegateImpl(
+     const TfLiteStableDelegate* delegate) {
+-  absl::MutexLock lock(mutex_);
++  absl::MutexLock lock(&mutex_);
+   registry_[delegate->delegate_name] = delegate;
+ }
+ 
+ const TfLiteStableDelegate* StableDelegateRegistry::RetrieveStableDelegateImpl(
+     const std::string& name) {
+-  absl::MutexLock lock(mutex_);
++  absl::MutexLock lock(&mutex_);
+   if (registry_.find(name) == registry_.end()) {
+     return nullptr;
+   } else {

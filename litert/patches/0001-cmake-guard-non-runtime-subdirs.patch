@@ -1,0 +1,119 @@
+--- a/litert/CMakeLists.txt
++++ b/litert/CMakeLists.txt
+@@ -70,6 +70,8 @@
+ option(LITERT_ENABLE_GPU "Enable GPU acceleration support" ON)
+ option(LITERT_ENABLE_NPU "Enable NPU acceleration support" ON)
+ option(LITERT_DISABLE_KLEIDIAI "Disable KleidiAI delegate when bundling host TFLite (default ON for Linux/macOS x86_64 hosts)" ${_litert_disable_kleidiai_default})
++option(LITERT_BUILD_VENDOR_PLUGINS "Build LiteRT vendor plugin libraries" ON)
++option(LITERT_BUILD_TOOLS "Build LiteRT command-line tools" ON)
+ 
+ set(LITERT_HOST_C_COMPILER "" CACHE FILEPATH "Host C compiler used for helper host-side tools (e.g. FlatBuffers flatc)")
+ set(LITERT_HOST_CXX_COMPILER "" CACHE FILEPATH "Host C++ compiler used for helper host-side tools (e.g. FlatBuffers flatc)")
+@@ -243,5 +245,9 @@
+ add_subdirectory(core)
+ add_subdirectory(runtime)
+ add_subdirectory(compiler)
+-add_subdirectory(vendors)
+-add_subdirectory(tools)
++if(LITERT_BUILD_VENDOR_PLUGINS)
++  add_subdirectory(vendors)
++endif()
++if(LITERT_BUILD_TOOLS)
++  add_subdirectory(tools)
++endif()
+--- a/litert/CMakeLists.txt
++++ b/litert/CMakeLists.txt
+@@ -101,8 +101,12 @@
+ set(TFLITE_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../tflite" CACHE PATH "Path to TFLite source directory")
+ set(TFLITE_BUILD_DIR "${CMAKE_CURRENT_BINARY_DIR}/tflite_build" CACHE PATH "Path to TFLite build directory")
+ 
+-set(TFLITE_ENABLE_XNNPACK ON CACHE BOOL "Enable XNNPACK in TFLite")
+-set(TFLITE_ENABLE_GPU ON CACHE BOOL "Enable GPU in TFLite")
++if(NOT DEFINED TFLITE_ENABLE_XNNPACK)
++  set(TFLITE_ENABLE_XNNPACK ON CACHE BOOL "Enable XNNPACK in TFLite")
++endif()
++if(NOT DEFINED TFLITE_ENABLE_GPU)
++  set(TFLITE_ENABLE_GPU ON CACHE BOOL "Enable GPU in TFLite")
++endif()
+ if(LITERT_DISABLE_KLEIDIAI)
+   set(XNNPACK_ENABLE_KLEIDIAI OFF CACHE BOOL "Disable KleidiAI in XNNPACK")
+ endif()
+--- a/litert/CMakeLists.txt
++++ b/litert/CMakeLists.txt
+@@ -215,7 +215,6 @@ if(NOT TARGET flatbuffers::flatbuffers)
+-  add_library(flatbuffers::flatbuffers STATIC IMPORTED)
++  add_library(flatbuffers::flatbuffers INTERFACE IMPORTED)
+   set_target_properties(flatbuffers::flatbuffers PROPERTIES
+-    IMPORTED_LOCATION "${TFLITE_BUILD_DIR}/_deps/flatbuffers-build/libflatbuffers.a"
+-    INTERFACE_INCLUDE_DIRECTORIES "${TFLITE_BUILD_DIR}/flatbuffers/include"
++    INTERFACE_INCLUDE_DIRECTORIES "${CMAKE_BINARY_DIR}/flatbuffers/include"
+   )
+ endif()
+ 
+--- a/litert/runtime/CMakeLists.txt
++++ b/litert/runtime/CMakeLists.txt
+@@ -22,7 +22,6 @@
+     accelerators/cpu_registry.cc
+     accelerators/gpu_registry.cc
+     accelerators/registration_helper.cc
+     accelerators/dispatch/dispatch_accelerator.cc
+-    accelerators/xnnpack/xnnpack_accelerator.cc
+     ahwb_buffer.cc
+     ahwb_wrapper.cc
+     compiled_model.cc
+@@ -59,6 +58,10 @@
+     ${TFLITE_SOURCE_DIR}/profiling/time.cc
+ )
+ 
++if(TFLITE_ENABLE_XNNPACK)
++  list(APPEND LITERT_RUNTIME_SOURCES accelerators/xnnpack/xnnpack_accelerator.cc)
++endif()
++
+ # Runtime library
+ add_library(litert_runtime STATIC ${LITERT_RUNTIME_SOURCES})
+ 
+--- a/tflite/CMakeLists.txt
++++ b/tflite/CMakeLists.txt
+@@ -90,6 +90,7 @@
+ option(TFLITE_ENABLE_METAL "Enable Metal delegate (iOS only)" OFF)
+ option(TFLITE_ENABLE_XNNPACK "Enable XNNPACK backend" ON)
+ option(TFLITE_ENABLE_EXTERNAL_DELEGATE "Enable External Delegate backend" ON)
++option(TFLITE_ENABLE_EXTRA_TOOLS "Enable benchmark, label_image, and proto helper targets" OFF)
+ 
+ option(TFLITE_KERNEL_TEST "Enable tflite kernel unit test" OFF)
+ 
+@@ -841,20 +842,26 @@
+ # tensorflow/lite directory structure for generated headers.
+ set(TFLITE_GENERATED_HEADERS_DIR ${CMAKE_BINARY_DIR}/tensorflow/lite)
+ 
+-# Add the profiling proto directory.
+-add_subdirectory(${TFLITE_SOURCE_DIR}/profiling/proto)
++if(TFLITE_ENABLE_EXTRA_TOOLS OR TFLITE_ENABLE_BENCHMARK_MODEL OR TFLITE_ENABLE_LABEL_IMAGE)
++  # Add the profiling proto directory.
++  add_subdirectory(${TFLITE_SOURCE_DIR}/profiling/proto)
+ 
+-# Add the benchmark result proto directory.
+-add_subdirectory(${TFLITE_SOURCE_DIR}/tools/benchmark/proto)
++  # Add the benchmark result proto directory.
++  add_subdirectory(${TFLITE_SOURCE_DIR}/tools/benchmark/proto)
+ 
+-# Add the tf example directory.
+-add_subdirectory(${TF_SOURCE_DIR}/core/example ${CMAKE_BINARY_DIR}/example_proto_generated)
++  # Add the tf example directory.
++  add_subdirectory(${TF_SOURCE_DIR}/core/example ${CMAKE_BINARY_DIR}/example_proto_generated)
++endif()
+ 
+ # The benchmark tool.
+-add_subdirectory(${TFLITE_SOURCE_DIR}/tools/benchmark)
++if(TFLITE_ENABLE_EXTRA_TOOLS OR TFLITE_ENABLE_BENCHMARK_MODEL)
++  add_subdirectory(${TFLITE_SOURCE_DIR}/tools/benchmark)
++endif()
+ 
+ # The label_image example.
+-add_subdirectory(${TFLITE_SOURCE_DIR}/examples/label_image)
++if(TFLITE_ENABLE_EXTRA_TOOLS OR TFLITE_ENABLE_LABEL_IMAGE)
++  add_subdirectory(${TFLITE_SOURCE_DIR}/examples/label_image)
++endif()
+ 
+ # Python interpreter wrapper.
+ add_library(_pywrap_tensorflow_interpreter_wrapper SHARED EXCLUDE_FROM_ALL

@@ -1,0 +1,34 @@
+--- a/litert/cc/internal/litert_shared_library.cc
++++ b/litert/cc/internal/litert_shared_library.cc
+@@ -250,12 +250,9 @@ Expected<SharedLibrary> SharedLibrary::LoadImpl(
+         return Error(Status::kErrorDynamicLoading,
+                      "Cannot not load shared library: empty path.");
+       }
+       lib.path_ = path;
+-      {
+-        absl::LeakCheckDisabler disabler;
+-        lib.handle_ =
+-            dlopen(lib.Path().c_str(), SanitizeFlagsInCaseOfAsan(flags));
+-      }
++      lib.handle_ =
++          dlopen(lib.Path().c_str(), SanitizeFlagsInCaseOfAsan(flags));
+       if (!lib.handle_) {
+         return Error(Status::kErrorDynamicLoading,
+                      absl::StrFormat("Could not load shared library %s: %s.",
+--- a/litert/runtime/litert_cpu_options.h
++++ b/litert/runtime/litert_cpu_options.h
+@@ -25,9 +25,14 @@
+ // Internal LiteRt CPU options struct. This data structure is used to
+ // pass CPU options to the interpreter and will be used in the framework
+ // code.
+ struct LiteRtCpuOptionsT {
++#ifdef TFLITE_WITHOUT_XNNPACK
++  LiteRtCpuKernelMode kernel_mode = kLiteRtCpuKernelModeBuiltin;
++  TfLiteXNNPackDelegateOptions xnn = {};
++#else
+   LiteRtCpuKernelMode kernel_mode = kLiteRtCpuKernelModeXnnpack;
+   TfLiteXNNPackDelegateOptions xnn = TfLiteXNNPackDelegateOptionsDefault();
++#endif
+   // We need to keep the string alive because `TfLiteXNNPackDelegateOptions`
+   // expects a `const char*` for `weight_cache_file_path` and does not manage
+   // its memory.
