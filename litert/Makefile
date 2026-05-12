@@ -32,6 +32,10 @@ CMAKE_SOURCE_SUBDIR:=litert
 PKG_BUILD_PARALLEL:=1
 PKG_BUILD_DEPENDS:=abseil-cpp cpuinfo eigen farmhash fft2d flatbuffers/host flatbuffers gemmlowp ml-dtypes ruy
 
+ifeq ($(CONFIG_LITERT_ENABLE_XNNPACK),y)
+PKG_BUILD_DEPENDS+=fp16 fxdiv pthreadpool xnnpack
+endif
+
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk
 
@@ -68,13 +72,46 @@ define Package/litert
   CATEGORY:=Libraries
   TITLE:=LiteRT inference runtime library
   URL:=https://ai.google.dev/edge/litert
-  DEPENDS:=+farmhash +libpthread +libstdcpp
+  DEPENDS:=+farmhash +libpthread +libstdcpp +LITERT_ENABLE_XNNPACK:xnnpack
+endef
+
+define Package/litert/config
+  config LITERT_ENABLE_XNNPACK
+	bool "Enable XNNPACK CPU delegate"
+	default n
+	help
+	  Build LiteRT with the TensorFlow Lite XNNPACK CPU delegate.
+	  XNNPACK can improve some floating-point and quantized model workloads
+	  on ARM CPUs, but it increases build time, binary size, and dependency
+	  complexity. Keep this disabled for the smallest validated CPU-only MVP.
 endef
 
 define Package/litert/description
  LiteRT shared runtime library for MVP validation on OpenWrt. This package
  builds the CPU runtime path and exports the bundled TensorFlow Lite C API.
 endef
+
+LITERT_CXX_FLAGS:=\
+	$(TARGET_CXXFLAGS) \
+	-DFLATBUFFERS_LOCALE_INDEPENDENT=0 \
+	-I$(PKG_BUILD_DIR)/flatbuffers/include \
+	-I$(STAGING_DIR)/usr/include/gemmlowp
+
+LITERT_XNNPACK_OPTIONS:=\
+	-DTFLITE_ENABLE_XNNPACK=OFF
+
+ifneq ($(CONFIG_LITERT_ENABLE_XNNPACK),y)
+LITERT_CXX_FLAGS+=-DTFLITE_WITHOUT_XNNPACK
+else
+LITERT_XNNPACK_OPTIONS:=\
+	-DFETCHCONTENT_SOURCE_DIR_XNNPACK=$(BUILD_DIR)/XNNPACK-d7f398ee5e135ef4f7045802eea973cc6cb26c6c \
+	-DFP16_SOURCE_DIR=$(BUILD_DIR)/FP16-98b0a46bce017382a6351a19577ec43a715b6835 \
+	-DFXDIV_SOURCE_DIR=$(BUILD_DIR)/FXdiv-63058eff77e11aa15bf531df5dd34395ec3017c8 \
+	-DPTHREADPOOL_SOURCE_DIR=$(BUILD_DIR)/pthreadpool-560c60d342a76076f0557a3946924c6478470044 \
+	-DTFLITE_ENABLE_XNNPACK=ON \
+	-DXNNPACK_SOURCE_DIR=$(BUILD_DIR)/XNNPACK-d7f398ee5e135ef4f7045802eea973cc6cb26c6c \
+	-DXNNPACK_USE_SYSTEM_LIBS=ON
+endif
 
 define Build/Prepare
 	$(call Build/Prepare/Default)
@@ -94,7 +131,7 @@ endef
 CMAKE_OPTIONS += \
 	-Dabsl_DIR=$(STAGING_DIR)/usr/lib/cmake/absl \
 	-DBUILD_SHARED_LIBS=OFF \
-	-DCMAKE_CXX_FLAGS="$(TARGET_CXXFLAGS) -DFLATBUFFERS_LOCALE_INDEPENDENT=0 -DTFLITE_WITHOUT_XNNPACK -I$(PKG_BUILD_DIR)/flatbuffers/include -I$(STAGING_DIR)/usr/include/gemmlowp" \
+	-DCMAKE_CXX_FLAGS="$(LITERT_CXX_FLAGS)" \
 	-DCMAKE_FIND_PACKAGE_PREFER_CONFIG=ON \
 	-DCMAKE_POSITION_INDEPENDENT_CODE=ON \
 	-DEigen3_DIR=$(STAGING_DIR)/usr/share/eigen3/cmake \
@@ -125,8 +162,8 @@ CMAKE_OPTIONS += \
 	-DTFLITE_ENABLE_MMAP=ON \
 	-DTFLITE_ENABLE_NNAPI=OFF \
 	-DTFLITE_ENABLE_RUY=ON \
-	-DTFLITE_ENABLE_XNNPACK=OFF \
-	-DTFLITE_HOST_TOOLS_DIR=$(PKG_BUILD_DIR)/flatbuffers-host
+	-DTFLITE_HOST_TOOLS_DIR=$(PKG_BUILD_DIR)/flatbuffers-host \
+	$(LITERT_XNNPACK_OPTIONS)
 
 define Build/Compile
 	$(call Build/Compile/CMake,litert_runtime_c_api_shared_lib)

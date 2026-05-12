@@ -17,6 +17,10 @@ CMAKE_SOURCE_SUBDIR:=tensorflow/lite
 PKG_BUILD_PARALLEL:=1
 PKG_BUILD_DEPENDS:=abseil-cpp cpuinfo eigen farmhash fft2d flatbuffers gemmlowp ml-dtypes neon-2-sse pthreadpool ruy
 
+ifeq ($(CONFIG_TENSORFLOW_LITE_ENABLE_XNNPACK),y)
+PKG_BUILD_DEPENDS+=fp16 fxdiv xnnpack
+endif
+
 include $(INCLUDE_DIR)/package.mk
 include $(INCLUDE_DIR)/cmake.mk
 
@@ -25,13 +29,38 @@ define Package/tensorflow-lite
   CATEGORY:=Libraries
   TITLE:=TensorFlow Lite inference library
   URL:=https://www.tensorflow.org/lite
-  DEPENDS:=+farmhash +libpthread +libstdcpp
+  DEPENDS:=+farmhash +libpthread +libstdcpp +TENSORFLOW_LITE_ENABLE_XNNPACK:xnnpack
+endef
+
+define Package/tensorflow-lite/config
+  config TENSORFLOW_LITE_ENABLE_XNNPACK
+	bool "Enable XNNPACK CPU delegate"
+	default n
+	help
+	  Build TensorFlow Lite with the XNNPACK CPU delegate.
+	  XNNPACK can improve some ARM CPU inference workloads, but it increases
+	  build time, binary size, and dependency complexity. Keep this disabled
+	  for the smallest validated CPU-only runtime.
 endef
 
 define Package/tensorflow-lite/description
  TensorFlow Lite dynamic library and headers for running trained machine
  learning models on-device.
 endef
+
+TENSORFLOW_LITE_XNNPACK_OPTIONS:=\
+	-DTFLITE_ENABLE_XNNPACK=OFF
+
+ifeq ($(CONFIG_TENSORFLOW_LITE_ENABLE_XNNPACK),y)
+TENSORFLOW_LITE_XNNPACK_OPTIONS:=\
+	-DFETCHCONTENT_SOURCE_DIR_XNNPACK=$(BUILD_DIR)/XNNPACK-d7f398ee5e135ef4f7045802eea973cc6cb26c6c \
+	-DFP16_SOURCE_DIR=$(BUILD_DIR)/FP16-98b0a46bce017382a6351a19577ec43a715b6835 \
+	-DFXDIV_SOURCE_DIR=$(BUILD_DIR)/FXdiv-63058eff77e11aa15bf531df5dd34395ec3017c8 \
+	-DPTHREADPOOL_SOURCE_DIR=$(BUILD_DIR)/pthreadpool-560c60d342a76076f0557a3946924c6478470044 \
+	-DTFLITE_ENABLE_XNNPACK=ON \
+	-DXNNPACK_SOURCE_DIR=$(BUILD_DIR)/XNNPACK-d7f398ee5e135ef4f7045802eea973cc6cb26c6c \
+	-DXNNPACK_USE_SYSTEM_LIBS=ON
+endif
 
 CMAKE_OPTIONS += \
 	-Dabsl_DIR=$(STAGING_DIR)/usr/lib/cmake/absl \
@@ -56,7 +85,7 @@ CMAKE_OPTIONS += \
 	-DTFLITE_ENABLE_MMAP=ON \
 	-DTFLITE_ENABLE_NNAPI=OFF \
 	-DTFLITE_ENABLE_RUY=ON \
-	-DTFLITE_ENABLE_XNNPACK=OFF
+	$(TENSORFLOW_LITE_XNNPACK_OPTIONS)
 
 define Build/InstallDev
 	$(call Build/InstallDev/cmake,$(1))
