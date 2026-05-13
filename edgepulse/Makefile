@@ -1,6 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=edgepulse
+PKG_VERSION:=1.1.0
 PKG_RELEASE:=1
 
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)
