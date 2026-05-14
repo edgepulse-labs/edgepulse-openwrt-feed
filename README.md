@@ -96,6 +96,10 @@ bin/packages/<arch>/edgepulse/
 For a quick reference of the currently built `.apk` artifact sizes, see
 [`docs/package-sizes.md`](docs/package-sizes.md).
 
+For package publishing options and release gates, see
+[`docs/package-release-plan.md`](docs/package-release-plan.md)
+([Traditional Chinese](docs/package-release-plan.zh-TW.md)).
+
 ## Runtime Validation
 
 Install the related APKs on an OpenWrt target:
