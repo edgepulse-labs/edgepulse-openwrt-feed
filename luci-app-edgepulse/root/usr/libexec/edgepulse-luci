@@ -33,12 +33,64 @@ case "$cmd" in
 		;;
 	agent-chat-list)
 		conversation_id="${1:-}"
-		exec /usr/bin/edgepulse-ctl agent chat list "$conversation_id"
+		if [ -n "$conversation_id" ]; then
+			exec /usr/bin/edgepulse-ctl agent chat list "$conversation_id"
+		fi
+		exec /usr/bin/edgepulse-ctl agent chat list
 		;;
 	agent-chat-ask)
 		conversation_id="${1:-default}"
 		message="${2:-Run a local EdgePulse diagnostic.}"
 		exec /usr/bin/edgepulse-ctl agent chat ask "$conversation_id" "$message"
+		;;
+	agent-action)
+		action="${1:-}"
+		shift || true
+		confirmed=0
+		service=""
+
+		while [ "$#" -gt 0 ]; do
+			case "$1" in
+				--confirm)
+					confirmed=1
+					shift
+					;;
+				--service)
+					service="${2:-}"
+					shift 2
+					;;
+				*)
+					echo '{"error":"unsupported EdgePulse LuCI action option"}'
+					exit 2
+					;;
+			esac
+		done
+
+		case "$action" in
+			reconnect-wan|wifi-restart|service-restart|status|wifi-status|wifi-metrics|service-status|dns-diagnose)
+				;;
+			*)
+				echo '{"error":"unsupported EdgePulse LuCI action"}'
+				exit 2
+				;;
+		esac
+
+		set -- agent action "$action"
+		if [ -n "$service" ]; then
+			case "$service" in
+				network|dnsmasq|firewall|uhttpd)
+					set -- "$@" --service "$service"
+					;;
+				*)
+					echo '{"error":"unsupported EdgePulse LuCI service"}'
+					exit 2
+					;;
+			esac
+		fi
+		if [ "$confirmed" = 1 ]; then
+			set -- "$@" --confirm
+		fi
+		exec /usr/bin/edgepulse-ctl "$@"
 		;;
 	agent-policy)
 		exec /usr/bin/edgepulse-ctl agent policy show

@@ -25,14 +25,55 @@ return view.extend({
 			fs.exec_direct('/usr/libexec/edgepulse-luci', [ 'agent-chat-list', 'default' ])
 				.catch(function(err) {
 					return JSON.stringify({ error: String(err), messages: [] });
+				}),
+			fs.exec_direct('/usr/libexec/edgepulse-luci', [ 'agent-chat-list' ])
+				.catch(function(err) {
+					return JSON.stringify({ error: String(err), conversations: [] });
+				}),
+			fs.exec_direct('/usr/libexec/edgepulse-luci', [ 'agent-policy' ])
+				.catch(function(err) {
+					return JSON.stringify({ error: String(err) });
 				})
 		]);
+	},
+
+	selectedConversationId: function() {
+		var select = document.querySelector('[data-edgepulse-agent-conversation]');
+		return select && select.value || 'default';
+	},
+
+	switchConversation: function() {
+		return this.refreshTranscript(this.selectedConversationId());
+	},
+
+	refreshTranscript: function(conversationId) {
+		var transcript = document.querySelector('[data-edgepulse-agent-transcript]');
+
+		if (transcript)
+			transcript.textContent = _('Loading conversation...');
+
+		return fs.exec_direct('/usr/libexec/edgepulse-luci', [ 'agent-chat-list', conversationId || 'default' ])
+			.then(function(chatResult) {
+				var parsed = {};
+
+				try {
+					parsed = JSON.parse(chatResult || '{}');
+				} catch (e) {
+					parsed = { messages: [] };
+				}
+
+				if (transcript)
+					transcript.textContent = this.renderTranscript(parsed.messages || []);
+			}.bind(this))
+			.catch(function(err) {
+				ui.addNotification(null, E('p', {}, String(err)), 'danger');
+			});
 	},
 
 	runDiagnostic: function(ev) {
 		var textarea = document.querySelector('[data-edgepulse-agent-question]');
 		var output = document.querySelector('[data-edgepulse-agent-output]');
-		var transcript = document.querySelector('[data-edgepulse-agent-transcript]');
+		var conversationId = this.selectedConversationId();
 		var message = ev && ev.currentTarget && ev.currentTarget.getAttribute('data-edgepulse-agent-prompt') ||
 			textarea && textarea.value ||
 			'Run a local EdgePulse diagnostic.';
@@ -40,7 +81,7 @@ return view.extend({
 		if (output)
 			output.textContent = _('Sending message...');
 
-		return fs.exec_direct('/usr/libexec/edgepulse-luci', [ 'agent-chat-ask', 'default', message ])
+		return fs.exec_direct('/usr/libexec/edgepulse-luci', [ 'agent-chat-ask', conversationId, message ])
 			.then(function(result) {
 				var parsed;
 
@@ -53,17 +94,41 @@ return view.extend({
 						output.textContent = result || _('No output');
 				}
 
-				return fs.exec_direct('/usr/libexec/edgepulse-luci', [ 'agent-chat-list', 'default' ]);
+				return this.refreshTranscript(conversationId);
 			})
-			.then(function(chatResult) {
-				var parsed;
+			.catch(function(err) {
+				ui.addNotification(null, E('p', {}, String(err)), 'danger');
+				if (output)
+					output.textContent = String(err);
+			});
+	},
 
-				try {
-					parsed = JSON.parse(chatResult || '{}');
-					if (transcript)
-						transcript.textContent = this.renderTranscript(parsed.messages || []);
-				} catch (e) {}
-			}.bind(this))
+	runOperation: function(ev) {
+		var button = ev && ev.currentTarget;
+		var action = button && button.getAttribute('data-edgepulse-agent-action');
+		var service = button && button.getAttribute('data-edgepulse-agent-service');
+		var label = button && button.textContent || action;
+		var output = document.querySelector('[data-edgepulse-agent-output]');
+		var args = [ 'agent-action', action ];
+
+		if (!action)
+			return Promise.resolve();
+
+		if (!window.confirm(_('Run confirmed EdgePulse operation: %s?').format(label)))
+			return Promise.resolve();
+
+		if (service)
+			args.push('--service', service);
+		args.push('--confirm');
+
+		if (output)
+			output.textContent = _('Running operation...');
+
+		return fs.exec_direct('/usr/libexec/edgepulse-luci', args)
+			.then(function(result) {
+				if (output)
+					output.textContent = result || _('No output');
+			})
 			.catch(function(err) {
 				ui.addNotification(null, E('p', {}, String(err)), 'danger');
 				if (output)
@@ -187,6 +252,46 @@ return view.extend({
 		return rows;
 	},
 
+	renderConversationOptions: function(conversations) {
+		var seen = {};
+		var options = [];
+
+		function push(id, title) {
+			if (!id || seen[id])
+				return;
+			seen[id] = true;
+			options.push(E('option', { 'value': id }, title ? id + ' - ' + title : id));
+		}
+
+		push('default', _('Default'));
+		(conversations || []).forEach(function(item) {
+			push(item.conversation_id, item.title || '');
+		});
+
+		return options;
+	},
+
+	renderPolicyRows: function(policy, agent) {
+		var permissions = policy.action_permissions || {};
+		var rows = [
+			[ _('Policy profile'), policy.policy_profile || agent.policy_profile || '-' ],
+			[ _('Mode'), policy.mode || '-' ],
+			[ _('WAN reconnect'), permissions.reconnect_wan ? _('Allowed') : _('Blocked') ],
+			[ _('Wi-Fi restart'), permissions.wifi_restart ? _('Allowed') : _('Blocked') ],
+			[ _('Wi-Fi settings'), permissions.wifi_set ? _('Allowed') : _('Blocked') ],
+			[ _('Service restart'), permissions.service_restart ? _('Allowed') : _('Blocked') ],
+			[ _('Confirmed actions'), (policy.confirmed_actions || []).join(', ') || '-' ],
+			[ _('Blocked categories'), (policy.blocked_categories || []).join(', ') || '-' ]
+		];
+
+		return rows.map(function(row) {
+			return E('div', { 'class': 'tr' }, [
+				E('div', { 'class': 'td left' }, row[0]),
+				E('div', { 'class': 'td left' }, row[1])
+			]);
+		});
+	},
+
 	render: function(data) {
 		var status = {};
 		var agent = {};
@@ -195,6 +300,8 @@ return view.extend({
 		var models = {};
 		var remoteModels = {};
 		var chat = {};
+		var conversations = {};
+		var policy = {};
 
 		try {
 			status = JSON.parse((data && data[0]) || '{}');
@@ -222,6 +329,16 @@ return view.extend({
 		} catch (e) {
 			chat = { error: _('Unable to parse shared conversation output'), messages: [] };
 		}
+		try {
+			conversations = JSON.parse((data && data[5]) || '{}');
+		} catch (e) {
+			conversations = { error: _('Unable to parse conversation list output'), conversations: [] };
+		}
+		try {
+			policy = JSON.parse((data && data[6]) || '{}');
+		} catch (e) {
+			policy = { error: _('Unable to parse policy output') };
+		}
 
 		if (status.error)
 			ui.addNotification(null, E('p', {}, status.error), 'danger');
@@ -229,6 +346,10 @@ return view.extend({
 			ui.addNotification(null, E('p', {}, memory.error), 'danger');
 		if (models.error)
 			ui.addNotification(null, E('p', {}, models.error), 'danger');
+		if (conversations.error)
+			ui.addNotification(null, E('p', {}, conversations.error), 'danger');
+		if (policy.error)
+			ui.addNotification(null, E('p', {}, policy.error), 'danger');
 
 		agent = status.agent || {};
 		model = status.model || {};
@@ -286,10 +407,47 @@ return view.extend({
 					return item.id;
 				}).join('\n') || (remoteModels.status ? _('Status: ') + remoteModels.status : _('No remote models loaded'))),
 			E('h3', {}, _('Shared conversation')),
+			E('div', { 'class': 'cbi-section' }, [
+				E('label', { 'class': 'cbi-value-title' }, _('Conversation')),
+				E('select', {
+					'data-edgepulse-agent-conversation': '1',
+					'change': this.switchConversation.bind(this)
+				}, this.renderConversationOptions(conversations.conversations || []))
+			]),
 			E('pre', {
 				'data-edgepulse-agent-transcript': '1',
 				'style': 'white-space:pre-wrap; min-height:8em'
 			}, this.renderTranscript(chat.messages || [])),
+			E('h3', {}, _('Policy')),
+			E('div', { 'class': 'table' }, this.renderPolicyRows(policy, agent)),
+			E('h3', {}, _('Operations')),
+			E('div', { 'class': 'cbi-section-actions' }, [
+				E('button', {
+					'class': 'btn cbi-button cbi-button-action',
+					'data-edgepulse-agent-action': 'reconnect-wan',
+					'click': this.runOperation.bind(this)
+				}, [ _('Reconnect WAN') ]),
+				' ',
+				E('button', {
+					'class': 'btn cbi-button cbi-button-action',
+					'data-edgepulse-agent-action': 'wifi-restart',
+					'click': this.runOperation.bind(this)
+				}, [ _('Restart Wi-Fi') ]),
+				' ',
+				E('button', {
+					'class': 'btn cbi-button cbi-button-action',
+					'data-edgepulse-agent-action': 'service-restart',
+					'data-edgepulse-agent-service': 'dnsmasq',
+					'click': this.runOperation.bind(this)
+				}, [ _('Restart DNS') ]),
+				' ',
+				E('button', {
+					'class': 'btn cbi-button cbi-button-action',
+					'data-edgepulse-agent-action': 'service-restart',
+					'data-edgepulse-agent-service': 'uhttpd',
+					'click': this.runOperation.bind(this)
+				}, [ _('Restart LuCI') ])
+			]),
 			E('h3', {}, _('Diagnostic')),
 			E('div', { 'class': 'cbi-section' }, [
 				E('textarea', {
